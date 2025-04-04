@@ -24,7 +24,9 @@ def convert_image_to_ubyte(img):
 def normalize(image):
     norm = np.zeros(shape=(image.shape))
     image_max = image.max()
-    image_min = 0
+    image_min = image.min()
+    print(image_max, image_min)
+
     for x in range(image.shape[0]):
         # Przekształcenie wartosci
         norm[x] = np.interp(image[x], (image_min, image_max), (0, 255))
@@ -85,7 +87,7 @@ def bresenham_line(img, x1, y1, x2, y2, return_coords=False):
 
 
 # Stoworzenie kernela do filtracji (21 jako domyślny, srodkowa wartość 0, wystarczy obliczyć połowe druga jest analogicznie)
-def generate_kernel(size: int = 21) -> np.array:
+def generate_kernel(size: int = 21) -> np.ndarray:
     if size % 2 == 0 or size < 1:
         return np.array([1])
     middle = size // 2
@@ -96,7 +98,7 @@ def generate_kernel(size: int = 21) -> np.array:
         else:
             filter_kernel[middle - k] = filter_kernel[middle + k] = (-4 / (np.pi ** 2)) / (k ** 2)
     filter_kernel[middle] = 1
-    print(filter_kernel)
+    #print(filter_kernel)
     return filter_kernel
 
 # Filtorwanie sinogramu
@@ -198,7 +200,7 @@ def calcualte_emitter_pos(x,y,r,emitter_pos):
 
 def save_dicom(image_array, filename="output.dcm", patient_name="Unknown", patient_id="0", study_date="", comment="No comment"):
     """ Tworzy plik DICOM z macierzy pikseli """
-    print(image_array.dtype)
+    #print(image_array.dtype)
     # Jeśli obraz jest w zakresie 0-1 (float), normalizujemy do 0-255 (uint8)
     #if image_array.dtype == np.float32 or image_array.dtype == np.float64:
     #    image_array = (image_array * 255).astype(np.uint8)
@@ -264,7 +266,7 @@ def open_dicom(filename):
 
     # Wyświetlenie obrazu
     image_array = dicom_ds.pixel_array
-    print(image_array[0])
+    #print(image_array[0])
     plt.imshow(image_array, cmap="gray")
     plt.title("Obraz DICOM")
     plt.axis("off")
@@ -295,15 +297,15 @@ plt.title('Sinogram')
 plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
 plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
 plt.show()
-print(r_s[0])
-#r_s = normalize(r_s)
-print(r_s[0])
+#print(r_s[0])
+r_s = normalize(r_s)
+#print(r_s[0])
 # img to twoja tablica obrazu
 img_scaled = (r_s - r_s.min()) / (r_s.max() - r_s.min()) * 255
-# Konwersja do typu całkowitego (8-bitowego)
+# Konwersja do typu całkowitego (8-bitowego) ( Z jakieos powodu bez tego zapisuje źle w dicom, prawdopodobnie zła konwersja z float na unit8 w normalizacji)
 img_scaled = img_scaled.astype(np.uint8)
 
-print(img_scaled[0])
+#print(img_scaled[0])
 
 save_dicom(img_scaled)
 
