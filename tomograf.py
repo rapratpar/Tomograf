@@ -273,41 +273,41 @@ def open_dicom(filename):
     plt.show()
 
 
-img = loadImage("CT_ScoutView.jpg")
+# img = loadImage("CT_ScoutView.jpg")
 
-sinogram = make_siogram(img,1, 270,360)
-kernel = generate_kernel(21)
-plt.imshow(sinogram, cmap='gray', aspect='auto')  # 'gray' to mapa kolorów do wyświetlania obrazów w skali szarości
-plt.title('Sinogram')
-plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
-plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
-plt.show()
+# sinogram = make_siogram(img,1, 270,360)
+# kernel = generate_kernel(21)
+# plt.imshow(sinogram, cmap='gray', aspect='auto')  # 'gray' to mapa kolorów do wyświetlania obrazów w skali szarości
+# plt.title('Sinogram')
+# plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
+# plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
+# plt.show()
 
-f_sinogram = convolution_filter(sinogram, kernel)
-plt.imshow(f_sinogram, cmap='gray', aspect='auto')  # 'gray' to mapa kolorów do wyświetlania obrazów w skali szarości
-plt.title('Sinogram')
-plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
-plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
-plt.show()
+# f_sinogram = convolution_filter(sinogram, kernel)
+# plt.imshow(f_sinogram, cmap='gray', aspect='auto')  # 'gray' to mapa kolorów do wyświetlania obrazów w skali szarości
+# plt.title('Sinogram')
+# plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
+# plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
+# plt.show()
 
-r_s = reverse_sinogram(f_sinogram,img,1, 270,360)
+# r_s = reverse_sinogram(f_sinogram,img,1, 270,360)
 
-plt.imshow(r_s, cmap='gray', aspect='auto')  # 'gray' to mapa kolorów do wyświetlania obrazów w skali szarości
-plt.title('Sinogram')
-plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
-plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
-plt.show()
-#print(r_s[0])
-r_s = normalize(r_s)
-#print(r_s[0])
-# img to twoja tablica obrazu
-img_scaled = (r_s - r_s.min()) / (r_s.max() - r_s.min()) * 255
-# Konwersja do typu całkowitego (8-bitowego) ( Z jakieos powodu bez tego zapisuje źle w dicom, prawdopodobnie zła konwersja z float na unit8 w normalizacji)
-img_scaled = img_scaled.astype(np.uint8)
+# plt.imshow(r_s, cmap='gray', aspect='auto')  # 'gray' to mapa kolorów do wyświetlania obrazów w skali szarości
+# plt.title('Sinogram')
+# plt.colorbar()  # Dodanie paska kolorów, żeby zobaczyć wartości
+# plt.axis('off')  # Ukrycie osi, jeżeli nie są potrzebne
+# plt.show()
+# #print(r_s[0])
+# r_s = normalize(r_s)
+# #print(r_s[0])
+# # img to twoja tablica obrazu
+# img_scaled = (r_s - r_s.min()) / (r_s.max() - r_s.min()) * 255
+# # Konwersja do typu całkowitego (8-bitowego) ( Z jakieos powodu bez tego zapisuje źle w dicom, prawdopodobnie zła konwersja z float na unit8 w normalizacji)
+# img_scaled = img_scaled.astype(np.uint8)
 
-#print(img_scaled[0])
+# #print(img_scaled[0])
 
-save_dicom(img_scaled)
+# save_dicom(img_scaled)
 
-#Sprawdze czy obraz dicom dobrze się zapisuje
-open_dicom("output.dcm")
+# #Sprawdze czy obraz dicom dobrze się zapisuje
+# open_dicom("output.dcm")
