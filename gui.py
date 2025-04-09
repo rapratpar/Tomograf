@@ -21,6 +21,7 @@ def process_image():
     use_filter = filter_var.get()
     save_as_dcm = save_dcm_var.get()
     save_as_jpg = save_jpg_var.get()
+    show_steps = show_steps_var.get()
     
 
     try:
@@ -30,7 +31,10 @@ def process_image():
         return
 
     try:
-        sinogram = make_siogram(img, interval, detectors_range=detectors_range, detectors_num=detectors_num)
+        sinogram = make_siogram(
+            img, interval, detectors_range=detectors_range, detectors_num=detectors_num,
+            tk_canvas=canvas if show_steps else None, update_interval=10
+        )    
     except Exception as e:
         messagebox.showerror("Error", f"Failed to generate sinogram: {e}")
         return
@@ -130,7 +134,13 @@ comment_var = tk.StringVar()
 comment_entry = tk.Entry(root, textvariable=comment_var, width=30)
 comment_entry.grid(row=10, column=1, padx=10, pady=5)
 
-tk.Button(root, text="Process", command=process_image).grid(row=11, column=0, columnspan=3, pady=20)
+show_steps_var = tk.BooleanVar()
+tk.Checkbutton(root, text="Show Intermediate Steps", variable=show_steps_var).grid(row=11, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+
+canvas = tk.Canvas(root, width=500, height=500, bg="white")
+canvas.grid(row=0, column=3, rowspan=14, padx=10, pady=10, sticky="n")
+
+tk.Button(root, text="Process", command=process_image).grid(row=12, column=0, columnspan=3, pady=20)
 
 toggle_dicom_inputs()
 

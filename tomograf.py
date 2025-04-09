@@ -1,9 +1,11 @@
 import math
+from tkinter import Tk
+import tkinter
 import skimage as sk
 import numpy as np
 import pydicom as dic
 import datetime
-from PIL import Image
+from PIL import Image, ImageTk
 from matplotlib import pyplot as plt
 import pydicom as pydicom
 from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
@@ -109,7 +111,7 @@ def convolution_filter(sinogram: np.ndarray, filter_kernel: np.array) -> np.arra
         filtered_row = np.convolve(sinogram[i, :], filter_kernel, mode='same')
         filtered_sinogram[i, :] = filtered_row
     return filtered_sinogram
-def make_siogram(img, interval, detectors_range, detectors_num):
+def make_siogram(img, interval, detectors_range, detectors_num, tk_canvas=None, update_interval=10):
     """
 
     TODO: Dodać iterracyjne podejśćie tzn: W tkinterze zamiast czekać na cały wynik, aplikacja będzie co jakiś czas
@@ -157,6 +159,15 @@ def make_siogram(img, interval, detectors_range, detectors_num):
 
             # Wyliczenie punktów miedzy emiterm i dekoderm, oraz wartosci na tej lini
             sinogram[emitter_id][detector_id] = bresenham_line(img, emitter_x, emitter_y, detector_x, detector_y)
+
+        if tk_canvas and emitter_id % update_interval == 0:
+            normalized_sinogram = normalize(sinogram)
+            tk_image = Image.fromarray(normalized_sinogram.astype(np.uint8))
+            tk_photo = ImageTk.PhotoImage(tk_image)
+            tk_canvas.create_image(0, 0, anchor=tkinter.NW, image=tk_photo)
+            tk_canvas.image = tk_photo
+            tk_canvas.update()
+            
     return normalize(sinogram)
 
 def reverse_sinogram(sinogram,img,interval,detectors_range,detectors_num):
@@ -273,7 +284,7 @@ def open_dicom(filename):
     plt.show()
 
 
-# img = loadImage("CT_ScoutView.jpg")
+# img = loadImage("Kropka.jpg")
 
 # sinogram = make_siogram(img,1, 270,360)
 # kernel = generate_kernel(21)
