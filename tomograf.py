@@ -27,7 +27,6 @@ def normalize(image):
     norm = np.zeros(shape=(image.shape))
     image_max = image.max()
     image_min = image.min()
-    print(image_max, image_min)
 
     for x in range(image.shape[0]):
         # Przekształcenie wartosci
@@ -39,6 +38,11 @@ def normalize(image):
 # Ładownia obrazu w skali szarosci i normalizacja
 def loadImage(image_path): # ładuje obrazek
     image = sk.io.imread(image_path, as_gray=True)
+    x = Image.fromarray(image)
+    print(image)
+    print(x)
+    print(x.size)
+
     image = normalize(image)
     return image
 
@@ -167,7 +171,6 @@ def make_siogram(img, interval, detectors_range, detectors_num, tk_canvas=None, 
             tk_canvas.create_image(0, 0, anchor=tkinter.NW, image=tk_photo)
             tk_canvas.image = tk_photo
             tk_canvas.update()
-            
     return normalize(sinogram)
 
 def reverse_sinogram(sinogram,img,interval,detectors_range,detectors_num):
@@ -184,7 +187,6 @@ def reverse_sinogram(sinogram,img,interval,detectors_range,detectors_num):
     R = min(X, Y) * math.sqrt(2)
     reversed_sinogram = np.zeros(shape=img.shape)
     detectors_range_rad = np.deg2rad(detectors_range)
-
     for emitter_id, emitter_angle in enumerate(emitter_angles):
         emitter_x, emitter_y = calcualte_emitter_pos(X, Y, R, emitter_angle)
         emitter_x, emitter_y = int(emitter_x), int(emitter_y)
@@ -199,7 +201,6 @@ def reverse_sinogram(sinogram,img,interval,detectors_range,detectors_num):
 
               # wzmacniamy piksele wyznaczonej linii o odpowiednią średnią
             reversed_sinogram [tuple(np.transpose(coords))] += sinogram[emitter_id][detector_id]
-
     return normalize(reversed_sinogram)
 
 
@@ -210,29 +211,27 @@ def calcualte_emitter_pos(x,y,r,emitter_pos):
 
 
 def save_dicom(image_array, filename="output.dcm", patient_name="Unknown", patient_id="0", study_date="", comment="No comment"):
-    """ Tworzy plik DICOM z macierzy pikseli """
     #print(image_array.dtype)
     # Jeśli obraz jest w zakresie 0-1 (float), normalizujemy do 0-255 (uint8)
     #if image_array.dtype == np.float32 or image_array.dtype == np.float64:
     #    image_array = (image_array * 255).astype(np.uint8)
     #img_converted = convert_image_to_ubyte(image_array)
-    # 📌 1️⃣ Tworzenie nagłówka metadanych
+
+
     file_meta = FileMetaDataset()
     file_meta.MediaStorageSOPClassUID = pydicom.uid.UID("1.2.840.10008.5.1.4.1.1.2")  # SOP Class UID dla CT
     file_meta.MediaStorageSOPInstanceUID = pydicom.uid.generate_uid()
     file_meta.ImplementationClassUID = pydicom.uid.UID("1.2.826.0.1.3680043.8.498.1")  # Unikalne ID implementacji
     file_meta.TransferSyntaxUID = pydicom.uid.ExplicitVRLittleEndian  # 🔴 POPRAWKA! Ustawienie Transfer Syntax UID
 
-    # 📌 2️⃣ Tworzenie głównego obiektu DICOM
     dicom_ds = FileDataset(filename, {}, file_meta=file_meta, preamble=b"\0" * 128)
+    dicom_ds.InstanceNumber = 1
 
-    # 📌 3️⃣ Generowanie unikalnych identyfikatorów
     dicom_ds.SOPInstanceUID = pydicom.uid.generate_uid()
     dicom_ds.SeriesInstanceUID = pydicom.uid.generate_uid()
     dicom_ds.StudyInstanceUID = pydicom.uid.generate_uid()
     dicom_ds.FrameOfReferenceUID = pydicom.uid.generate_uid()
 
-    # 📌 4️⃣ Dane pacjenta
     dt = datetime.datetime.now()
     dicom_ds.StudyDate = study_date if study_date else dt.strftime('%Y%m%d')
     dicom_ds.ContentDate = study_date if study_date else dt.strftime('%Y%m%d')
@@ -243,7 +242,6 @@ def save_dicom(image_array, filename="output.dcm", patient_name="Unknown", patie
     dicom_ds.SeriesNumber = "1"
     dicom_ds.PatientComments = comment
 
-    # 📌 5️⃣ Ustawienia obrazu
     dicom_ds.ImageType = ["ORIGINAL", "PRIMARY", "AXIAL"]
     dicom_ds.Modality = "CT"
     dicom_ds.Rows, dicom_ds.Columns = image_array.shape
@@ -255,25 +253,21 @@ def save_dicom(image_array, filename="output.dcm", patient_name="Unknown", patie
     dicom_ds.PixelRepresentation = 0
     dicom_ds.PixelData = image_array.tobytes()
 
-    # 📌 6️⃣ Ustawienie sposobu kodowania danych
     dicom_ds.is_little_endian = True
-    dicom_ds.is_implicit_VR = False  # Explicit VR zapewnia lepszą kompatybilność
+    dicom_ds.is_implicit_VR = False
 
-    # 📌 7️⃣ Zapisywanie pliku DICOM
     dicom_ds.save_as(filename, write_like_original=False)
-    print(f"Plik DICOM zapisano jako {filename}")
 
+
+    ds = pydicom.dcmread(filename)
     return filename
 
+# Pierwsza zwracana wartość to mse, druga to rmse
+def calcualte_mse(og_img, rec_img):
+    mse = np.square(np.subtract(og_img, rec_img)).mean()
+    return (mse, np.sqrt(mse))
 def open_dicom(filename):
-    """ Otwiera plik DICOM i wyświetla obraz oraz jego metadane """
     dicom_ds = pydicom.dcmread(filename)
-
-    # Wyświetlenie podstawowych informacji
-    print(f"Pacjent: {dicom_ds.PatientName}")
-    print(f"ID pacjenta: {dicom_ds.PatientID}")
-    print(f"Data badania: {dicom_ds.StudyDate}")
-    print(f"Komentarz: {dicom_ds.PatientComments}")
 
     # Wyświetlenie obrazu
     image_array = dicom_ds.pixel_array

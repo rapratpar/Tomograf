@@ -1,10 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter.ttk import Combobox
-from tomograf import loadImage, make_siogram, generate_kernel, convolution_filter, reverse_sinogram, save_dicom
+from tomograf import loadImage, make_siogram, generate_kernel, convolution_filter, reverse_sinogram, save_dicom, calcualte_mse, normalize
 import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
+import pydicom as pydicom
+from datetime import datetime
+
+
+
 
 def toggle_dicom_inputs():
     state = "normal" if save_dcm_var.get() else "disabled"
@@ -22,19 +27,28 @@ def process_image():
     save_as_dcm = save_dcm_var.get()
     save_as_jpg = save_jpg_var.get()
     show_steps = show_steps_var.get()
-    
 
+    file_path = image_path.get()
     try:
-        img = loadImage(image_path.get())
+        if file_path[-4:] == ".dcm":
+            dcm = pydicom.dcmread("output.dcm")
+            og_img = normalize(dcm.pixel_array)
+            ds = pydicom.dcmread(file_path)
+            p_name = dcm.PatientName
+            p_id = dcm.get('PatientID', 'NONE')
+            date = datetime.strptime(dcm.get('StudyDate', ''), '%Y%m%d').date()
+            p_comment = dcm.get('PatientComments', 'NONE')
+        else:
+            og_img = loadImage(image_path.get())
     except Exception as e:
         messagebox.showerror("Error", f"Failed to load image: {e}")
         return
 
     try:
         sinogram = make_siogram(
-            img, interval, detectors_range=detectors_range, detectors_num=detectors_num,
+            og_img, interval, detectors_range=detectors_range, detectors_num=detectors_num,
             tk_canvas=canvas if show_steps else None, update_interval=10
-        )    
+        )
     except Exception as e:
         messagebox.showerror("Error", f"Failed to generate sinogram: {e}")
         return
@@ -44,7 +58,7 @@ def process_image():
         sinogram = convolution_filter(sinogram, kernel)
 
     try:
-        reconstructed_image = reverse_sinogram(sinogram, img, interval=interval, detectors_range=detectors_range, detectors_num=detectors_num)
+        reconstructed_image = reverse_sinogram(sinogram, og_img, interval=interval, detectors_range=detectors_range, detectors_num=detectors_num)
     except Exception as e:
         messagebox.showerror("Error", f"Failed to reverse sinogram: {e}")
         return
@@ -58,6 +72,8 @@ def process_image():
         comment = comment_var.get()
         try:
             save_dicom(reconstructed_image, filename="output.dcm", patient_name=patient_name, patient_id=patient_id, study_date=study_date, comment=comment)
+
+            ds = pydicom.dcmread("output.dcm")
             messagebox.showinfo("Success", "Reconstructed image saved as output.dcm")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save DICOM: {e}")
@@ -65,8 +81,8 @@ def process_image():
 
     if save_as_jpg:
         try:
-            img = Image.fromarray(reconstructed_image)
-            img.save("output.jpg")
+            rec_img = Image.fromarray(reconstructed_image)
+            rec_img.save("output.jpg")
             messagebox.showinfo("Success", "Reconstructed image saved as output.jpg")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save JPG: {e}")
@@ -75,10 +91,39 @@ def process_image():
     plt.imshow(reconstructed_image, cmap='gray')
     plt.title("Reconstructed Image")
     plt.axis("off")
+    mse, rmse = calcualte_mse(og_img,rec_img)
+    if file_path[-4:] == ".dcm":
+        patient_info = [
+            f"Patient name: {p_name}",
+            f"Date: {date}",
+            f"ID: {p_id}",
+            f"Comment: {p_comment}"
+        ]
+
+        y_start = 0.15
+        line_spacing = 0.03
+        last_y = y_start
+
+        for i, info in enumerate(patient_info):
+            y_pos = y_start - i * line_spacing
+            plt.figtext(0.5, y_pos, info, wrap=True,
+                        horizontalalignment='center', fontsize=10)
+            last_y = y_pos
+
+        rmse_y = last_y - 0.04
+        plt.figtext(0.4, rmse_y, f"MSE = {mse:.4f}", wrap=True,
+                    horizontalalignment='right', fontsize=10)
+        plt.figtext(0.6, rmse_y, f"RMSE = {rmse:.4f}", wrap=True,
+                    horizontalalignment='left', fontsize=10)
+
+        plt.subplots_adjust(bottom=0.3)
+    else:
+        plt.figtext(0.3,0.01, f"MSE = {mse}", wrap=True, horizontalalignment='center', fontsize=10)
+        plt.figtext(0.7,0.01, f"RMSE = {rmse}", wrap=True, horizontalalignment='center', fontsize=10)
     plt.show()
 
 def browse_file():
-    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg;*.png;*.bmp")])
+    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg;*.png;*.bmp"),("Dicom","*.dcm")])
     if file_path:
         image_path.set(file_path)
 
@@ -124,7 +169,7 @@ patient_id_var = tk.StringVar()
 patient_id_entry = tk.Entry(root, textvariable=patient_id_var, width=30)
 patient_id_entry.grid(row=8, column=1, padx=10, pady=5)
 
-tk.Label(root, text="Study Date (YYYYMMDD):").grid(row=9, column=0, padx=10, pady=5, sticky="w")
+tk.Label(root, text="Study Date (YYYY/MM/DD):").grid(row=9, column=0, padx=10, pady=5, sticky="w")
 study_date_var = tk.StringVar()
 study_date_entry = tk.Entry(root, textvariable=study_date_var, width=30)
 study_date_entry.grid(row=9, column=1, padx=10, pady=5)
