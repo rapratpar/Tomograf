@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from tkinter.ttk import Combobox
 from tomograf import loadImage, make_siogram, generate_kernel, convolution_filter, reverse_sinogram, save_dicom, calcualte_mse, normalize
 import matplotlib.pyplot as plt
-from PIL import Image
+from PIL import Image, ImageTk
 import numpy as np
 import pydicom as pydicom
 from datetime import datetime
@@ -57,6 +57,16 @@ def process_image():
         kernel = generate_kernel(21)
         sinogram = convolution_filter(sinogram, kernel)
 
+        try:
+            normalized_sinogram = normalize(sinogram)
+            sinogram_image = Image.fromarray(normalized_sinogram.astype(np.uint8))
+            sinogram_photo = ImageTk.PhotoImage(sinogram_image)
+            filtered_sinogram_canvas.create_image(0, 0, anchor=tk.NW, image=sinogram_photo)
+            filtered_sinogram_canvas.image = sinogram_photo
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to display filtered sinogram: {e}")
+            return
+        
     try:
         reconstructed_image = reverse_sinogram(sinogram, og_img, interval=interval, detectors_range=detectors_range, detectors_num=detectors_num)
     except Exception as e:
@@ -64,6 +74,16 @@ def process_image():
         return
 
     reconstructed_image = reconstructed_image.astype('uint8')
+
+    # try:
+    #     reconstructed_image_pil = Image.fromarray(reconstructed_image)
+    #     reconstructed_image_photo = ImageTk.PhotoImage(reconstructed_image_pil)
+    #     reconstructed_image_canvas.create_image(0, 0, anchor=tk.NW, image=reconstructed_image_photo)
+    #     reconstructed_image_canvas.image = reconstructed_image_photo
+    # except Exception as e:
+    #     messagebox.showerror("Error", f"Failed to display reconstructed image: {e}")
+    #     return
+    
 
     if save_as_dcm:
         patient_name = patient_name_var.get()
@@ -182,8 +202,14 @@ comment_entry.grid(row=10, column=1, padx=10, pady=5)
 show_steps_var = tk.BooleanVar()
 tk.Checkbutton(root, text="Show Intermediate Steps", variable=show_steps_var).grid(row=11, column=0, columnspan=2, padx=10, pady=10, sticky="w")
 
-canvas = tk.Canvas(root, width=500, height=500, bg="white")
+canvas = tk.Canvas(root, width=400, height=400, bg="white")
 canvas.grid(row=0, column=3, rowspan=14, padx=10, pady=10, sticky="n")
+
+filtered_sinogram_canvas = tk.Canvas(root, width=400, height=400, bg="white")
+filtered_sinogram_canvas.grid(row=0, column=4, rowspan=7, padx=10, pady=10, sticky="n")
+
+# reconstructed_image_canvas = tk.Canvas(root, width=400, height=400, bg="white")
+# reconstructed_image_canvas.grid(row=7, column=4, rowspan=7, padx=10, pady=10, sticky="n")
 
 tk.Button(root, text="Process", command=process_image).grid(row=12, column=0, columnspan=3, pady=20)
 
